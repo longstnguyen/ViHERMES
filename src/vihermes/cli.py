@@ -1,0 +1,259 @@
+"""One command surface for ingestion, retrieval, QA, evaluation, and dataset construction."""
+
+import argparse
+import json
+import os
+from collections import Counter
+from contextlib import ExitStack
+from dataclasses import asdict
+from pathlib import Path
+
+from . import __version__
+from .agents import Auditor, Conductor, Interpreter, Pathfinder
+from .data import extract_contexts, load_qa
+from .evaluation import evaluate
+from .graph import SQLiteGraph
+from .ingestion import ingest
+from .models import Plan
+from .retrieval import GraphPropagator, HybridRetriever, NumpyDenseIndex, units
+
+
+def emit(value):
+    print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def embedder(args):
+    from .adapters.models import HashEmbedder, OpenAIEmbedder, SentenceEmbedder
+
+    if args.embedding == "hash":
+        return HashEmbedder()
+    if args.embedding == "openai":
+        return OpenAIEmbedder(args.embedding_model or "text-embedding-3-small")
+    if not args.embedding_model:
+        raise ValueError("--embedding-model is required for sentence-transformers")
+    return SentenceEmbedder(args.embedding_model)
+
+
+def graph(args, stack):
+    if args.graph == "neo4j":
+        from .adapters.neo4j import Neo4jGraph
+
+        store = Neo4jGraph(
+            os.environ.get("NEO4J_URI", "bolt://localhost:7687"),
+            os.environ.get("NEO4J_USER", "neo4j"),
+            os.environ["NEO4J_PASSWORD"],
+        )
+    else:
+        store = SQLiteGraph(args.db)
+    stack.callback(store.close)
+    return store
+
+
+def dense_index(args, store, stack):
+    encoder = embedder(args)
+    if args.vector == "milvus":
+        from .adapters.milvus import MilvusDenseIndex
+
+        index = MilvusDenseIndex(
+            units(store),
+            encoder,
+            os.environ.get("MILVUS_URI", "http://localhost:19530"),
+            os.environ.get("MILVUS_TOKEN", ""),
+        )
+        stack.callback(index.close)
+        return index
+    return NumpyDenseIndex(units(store), encoder, Path(args.index))
+
+
+def pipeline(args, store, stack):
+    weight = args.dense_weight
+    if not 0 <= weight <= 1 or args.k < 1:
+        raise ValueError("Use a dense weight in [0,1] and a positive seed count")
+    dense = dense_index(args, store, stack) if weight > 0 else None
+    retrieval = HybridRetriever(store, dense, weight)
+    pathfinder = Pathfinder(
+        retrieval, GraphPropagator(store, args.max_depth, args.max_nodes, args.max_chars), args.k
+    )
+    return pathfinder
+
+
+def conductor(args, pathfinder):
+    from .adapters.models import OpenAILanguageModel
+
+    llm = OpenAILanguageModel(args.model) if args.generator == "openai" else None
+    return Conductor(Interpreter(llm), pathfinder, Auditor(llm), llm)
+
+
+def parser():
+    p = argparse.ArgumentParser(prog="vihermes", description=__doc__)
+    p.add_argument("--version", action="version", version=__version__)
+    sub = p.add_subparsers(dest="command", required=True)
+    for name in ("ingest", "index", "retrieve", "ask", "evaluate", "construct"):
+        command = sub.add_parser(name)
+        command.add_argument("--graph", choices=["sqlite", "neo4j"], default="sqlite")
+        command.add_argument("--db", default="outputs/vihermes.db")
+        if name in ("index", "retrieve", "ask", "evaluate", "construct"):
+            command.add_argument(
+                "--embedding", choices=["openai", "sentence-transformers", "hash"], default="openai"
+            )
+            command.add_argument("--embedding-model")
+            command.add_argument("--index", default="outputs/dense.npz")
+            command.add_argument("--vector", choices=["numpy", "milvus"], default="numpy")
+        if name in ("retrieve", "ask", "evaluate"):
+            command.add_argument("--dense-weight", type=float, default=0.5)
+            command.add_argument("-k", type=int, default=5)
+            command.add_argument("--max-depth", type=int, default=4)
+            command.add_argument("--max-nodes", type=int, default=24)
+            command.add_argument("--max-chars", type=int, default=16000)
+        if name in ("ask", "evaluate", "construct"):
+            command.add_argument("--model", default="gpt-4o-mini")
+        if name in ("ask", "evaluate"):
+            command.add_argument("--generator", choices=["openai", "extractive"], default="openai")
+        if name == "ingest":
+            command.add_argument("--input", required=True)
+        elif name == "index":
+            command.add_argument("--force", action="store_true")
+        elif name in ("retrieve", "ask"):
+            command.add_argument("question")
+        elif name == "evaluate":
+            command.add_argument("--qa", required=True)
+            command.add_argument("--output", required=True)
+            command.add_argument("--limit", type=int)
+            command.add_argument("--answers", action="store_true")
+            command.add_argument("--judge", action="store_true")
+            command.add_argument("--judge-model", default="gpt-4o")
+            command.add_argument("--ks", default="1,5,10")
+        elif name == "construct":
+            command.add_argument("--output", required=True)
+            command.add_argument("--hops", default="1,2,3,4,5")
+            command.add_argument("--per-hop", type=int, default=10)
+            command.add_argument("--clusters", type=int, default=20)
+            command.add_argument("--per-cluster", type=int, default=3)
+            command.add_argument("--overlap", type=float, default=0.5)
+            command.add_argument("--test-fraction", type=float, default=0.2)
+            command.add_argument("--seed", type=int, default=42)
+    audit = sub.add_parser("audit-data")
+    audit.add_argument("--qa", required=True)
+    extract = sub.add_parser("extract-contexts")
+    extract.add_argument("--qa", required=True)
+    extract.add_argument("--output", required=True)
+    demo = sub.add_parser("demo")
+    demo.add_argument("--output", default="outputs/demo")
+    return p
+
+
+def demo(output):
+    """A synthetic amendment example; independent of the research benchmark."""
+    from .adapters.models import HashEmbedder
+    from .ingestion import parse_document
+
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=True)
+    with SQLiteGraph(":memory:") as store:
+        documents = [
+            (
+                "01/2020/TT-BYT",
+                "Thông tư 01/2020/TT-BYT (ví dụ)",
+                "Điều 2. Hồ sơ đăng ký\n1. Hồ sơ đăng ký gồm bản giấy.",
+            ),
+            (
+                "02/2025/TT-BYT",
+                "Thông tư 02/2025/TT-BYT (ví dụ)",
+                "Điều 1. Sửa đổi Điều 2 của Thông tư số 01/2020/TT-BYT.\nHồ sơ đăng ký gồm bản điện tử.",
+            ),
+        ]
+        for key, title, text in documents:
+            nodes, edges = parse_document(key, title, text)
+            for node in nodes:
+                store.upsert_node(node)
+            for edge in edges:
+                store.upsert_edge(edge)
+        dense = NumpyDenseIndex(units(store), HashEmbedder())
+        pathfinder = Pathfinder(HybridRetriever(store, dense), GraphPropagator(store), k=2)
+        engine = Conductor(Interpreter(), pathfinder, Auditor())
+        result = engine.ask("Hồ sơ đăng ký gồm những gì theo Thông tư 01/2020/TT-BYT?")
+        payload = asdict(result)
+        (output / "answer.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+        )
+        return payload
+
+
+def run(args):
+    if args.command == "demo":
+        return demo(args.output)
+    if args.command == "extract-contexts":
+        return {"contexts": extract_contexts(args.qa, args.output)}
+    if args.command == "audit-data":
+        examples = load_qa(args.qa)
+        return {
+            "records": len(examples),
+            "by_hop": dict(Counter(e.hop_level for e in examples)),
+            "duplicate_source_ids": len(examples)
+            - len({e.metadata["original_id"] for e in examples}),
+            "unique_evaluation_ids": len({e.id for e in examples}),
+            "gold_hop_mismatches": sum(len(e.gold_context_ids) != e.hop_level for e in examples),
+        }
+    with ExitStack() as stack:
+        store = graph(args, stack)
+        if args.command == "ingest":
+            return ingest(args.input, store)
+        if args.command == "index":
+            if args.force and args.vector == "numpy":
+                Path(args.index).unlink(missing_ok=True)
+            index = dense_index(args, store, stack)
+            return {"units": len(index.ids), "vector": args.vector, "embedding": args.embedding}
+        if args.command == "construct":
+            from .adapters.models import OpenAILanguageModel
+            from .construction import construct
+
+            return construct(
+                units(store),
+                embedder(args),
+                OpenAILanguageModel(args.model),
+                args.output,
+                tuple(int(h) for h in args.hops.split(",")),
+                args.per_hop,
+                args.clusters,
+                args.per_cluster,
+                args.overlap,
+                args.test_fraction,
+                args.seed,
+            )
+        pathfinder = pipeline(args, store, stack)
+        if args.command == "retrieve":
+            return asdict(pathfinder.retrieve(Plan(args.question)))
+        if args.command == "ask":
+            return asdict(conductor(args, pathfinder).ask(args.question))
+        examples = load_qa(args.qa)
+        if args.limit is not None:
+            if args.limit < 1:
+                raise ValueError("--limit must be positive")
+            examples = examples[: args.limit]
+        ks = tuple(int(k) for k in args.ks.split(","))
+        if not ks or min(ks) < 1:
+            raise ValueError("All recall cutoffs must be positive")
+        if args.judge and not args.answers:
+            raise ValueError("--judge requires --answers")
+        from .adapters.models import OpenAILanguageModel
+
+        report = evaluate(
+            examples,
+            pathfinder,
+            args.output,
+            conductor(args, pathfinder) if args.answers else None,
+            OpenAILanguageModel(args.judge_model) if args.judge else None,
+            ks,
+        )
+        config = vars(args).copy()
+        (Path(args.output) / "config.json").write_text(json.dumps(config, indent=2) + "\n")
+        return report
+
+
+def main():
+    p = parser()
+    args = p.parse_args()
+    try:
+        emit(run(args))
+    except (ValueError, KeyError, ImportError, OSError) as error:
+        p.exit(2, f"vihermes: {error}\n")

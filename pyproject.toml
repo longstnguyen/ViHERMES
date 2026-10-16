@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vihermes"
+version = "0.2.0"
+description = "Graph-grounded multihop retrieval and question answering for Vietnamese regulations"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Long S. T. Nguyen"}, {name = "Quan M. Bui"}]
+dependencies = ["numpy>=1.24,<3"]
+
+[project.urls]
+Repository = "https://github.com/longstnguyen/Vi-HERMES"
+Paper = "https://doi.org/10.1007/978-981-92-0071-9_22"
+
+[project.optional-dependencies]
+openai = ["openai>=1.30,<3"]
+local-models = ["sentence-transformers>=3,<6"]
+stores = ["neo4j>=5.21,<7", "pymilvus>=2.4,<3"]
+dataset = ["scikit-learn>=1.4,<2"]
+dev = ["pytest>=8,<9", "ruff>=0.9", "build>=1"]
+
+[project.scripts]
+vihermes = "vihermes.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

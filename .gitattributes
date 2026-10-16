@@ -1,0 +1,3 @@
+# Preserve released data byte-for-byte, including whitespace inside quoted CSV fields.
+/dataset/*.csv -text -whitespace
+/dataset/*.jsonl -text -whitespace

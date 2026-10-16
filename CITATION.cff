@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use ViHERMES, please cite the accompanying paper."
+title: "ViHERMES: A Graph-Grounded Multihop Question Answering Benchmark and System for Vietnamese Healthcare Regulations"
+type: software
+repository-code: "https://github.com/longstnguyen/Vi-HERMES"
+version: 0.2.0
+license: MIT
+authors:
+  - family-names: Nguyen
+    given-names: Long S. T.
+  - family-names: Bui
+    given-names: Quan M.
+preferred-citation:
+  type: conference-paper
+  title: "ViHERMES: A Graph-Grounded Multihop Question Answering Benchmark and System for Vietnamese Healthcare Regulations"
+  authors:
+    - family-names: Nguyen
+      given-names: Long S. T.
+    - family-names: Bui
+      given-names: Quan M.
+    - family-names: Ngo
+      given-names: Tin T.
+    - family-names: Vo
+      given-names: Quynh T. N.
+    - family-names: Le
+      given-names: Dung N. H.
+    - family-names: Quan
+      given-names: Tho T.
+  year: 2026
+  collection-title: Intelligent Information and Database Systems
+  doi: 10.1007/978-981-92-0071-9_22
+  url: "https://link.springer.com/chapter/10.1007/978-981-92-0071-9_22"
+  start: 321
+  end: 336
