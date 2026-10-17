@@ -1,3 +1,5 @@
+<p align="center"><img src="../docs/assets/guide.svg" width="100%" alt="ViHERMES research code and data"></p>
+
 # ViHERMES dataset
 
 [↑ Dataset overview](../README.md#dataset) · [Usage guide](../docs/usage.md) · [Citation](../README.md#citation)
