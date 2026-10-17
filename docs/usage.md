@@ -11,10 +11,18 @@ Run commands from the repository root. Every command exposes `--help`. Generated
 Use UTF-8 JSONL for complete documents. Supply the canonical document number as `id` and retain available provenance in `metadata`:
 
 ```json
-{"id":"01/2020/TT-BYT","title":"Thông tư 01/2020/TT-BYT","text":"Điều 1. Hồ sơ\n1. Hồ sơ gồm bản điện tử.","metadata":{"source_url":"https://example.org/document","effective_date":"2020-07-01"}}
+{
+  "id": "01/2020/TT-BYT",
+  "title": "Thông tư 01/2020/TT-BYT",
+  "text": "Điều 1. Hồ sơ\n1. Hồ sơ gồm bản điện tử.",
+  "metadata": {
+    "source_url": "https://example.org/document",
+    "effective_date": "2020-07-01"
+  }
+}
 ```
 
-The snippet is a synthetic format example. Supported temporal fields are `effective_date` and `expiry_date` in `YYYY-MM-DD` form. Status may include `effective`, `amended`, `draft`, `expired`, or `repealed`. Unknown status/date values should remain absent; publication dates are not automatically treated as effective dates.
+The snippet is a synthetic record shown expanded for readability; serialize each complete record on one line in the JSONL input file. Supported temporal fields are `effective_date` and `expiry_date` in `YYYY-MM-DD` form. Status may include `effective`, `amended`, `draft`, `expired`, or `repealed`. Unknown status/date values should remain absent; publication dates are not automatically treated as effective dates.
 
 ```bash
 vihermes ingest --input your_documents.jsonl --db outputs/vihermes.db
