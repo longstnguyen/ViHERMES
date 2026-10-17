@@ -61,7 +61,7 @@ NumPy indexes record the corpus fingerprint, ordered IDs, and embedding model id
 
 Generated answers consist of individual claims, source IDs, and exact supporting quotations. The Auditor first checks source membership, quoted spans, known status/dates, and replacement conflicts. In generative mode, an additional structured LLM call checks semantic entailment and amendment consistency.
 
-Failed grounding returns an abstention. Offline extractive mode returns source quotations for local pipeline checks. Full generative runs can use a different verifier by injecting another `LanguageModel` into `Auditor`.
+After failed validation, the Conductor can revise the draft using the same evidence and the Auditor's feedback. One revision is enabled by default; `--repair-attempts` accepts 0–2. Every revised draft passes the complete validation sequence again. Explicit abstentions stop immediately, and failed final drafts return an abstention. Offline extractive mode returns source quotations for local pipeline checks. Full generative runs can use a different verifier by injecting another `LanguageModel` into `Auditor`.
 
 ## Adding a backend
 

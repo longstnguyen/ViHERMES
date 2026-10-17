@@ -83,6 +83,11 @@ vihermes ask --dense-weight 0 --generator extractive \
 | `--max-depth` | 4 | Maximum validity-chain depth |
 | `--max-nodes` | 24 | Maximum nodes in assembled context |
 | `--max-chars` | 16000 | Maximum legal-unit text characters |
+| `--repair-attempts` | 1 | Maximum revisions after failed answer validation; 0 disables repair, 2 is the upper limit |
+
+Each revision receives the same retrieved evidence and the Auditor's feedback, then passes
+through citation, quotation, and semantic checks again. The trace records routing, graph
+expansion, validation failures, and repair attempts. An unsupported final draft is withheld.
 
 ## External stores
 
@@ -115,7 +120,7 @@ vihermes evaluate --qa dataset/dataset.jsonl \
 
 Use `--limit 20` for a short run. Omitting it evaluates every record. The output includes macro-averaged Recall@k, token-level F1 when answers are requested, and metrics grouped by hop level. Recall uses the unique gold context IDs and the first k retrieved legal units; provenance document nodes do not occupy the ranking. Queries without gold IDs have a null recall and an explicit denominator count. Failed provider calls stop the run, retaining completed predictions for inspection.
 
-F1 uses Unicode-normalized, case-folded word tokens with multiset overlap; rendered citation markers are excluded. The optional judge scores correctness, completeness, and evidence consistency on 0–1 scales; their mean is the reported judge score. Its prompt is in `evaluation.py`. Use the same rubric, model, corpus, and settings when comparing systems.
+F1 uses Unicode-normalized, case-folded word tokens with multiset overlap; rendered citation markers are excluded. The optional judge scores correctness, completeness, and evidence consistency on 0–1 scales; their mean is the reported judge score. Abstentions receive zero without a judge call and remain in the evaluation denominator. Its prompt is in `evaluation.py`. Use the same rubric, model, corpus, and settings when comparing systems.
 
 ## Construct a dataset
 

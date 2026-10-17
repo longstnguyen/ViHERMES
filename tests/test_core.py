@@ -189,6 +189,30 @@ def test_metrics_and_denominators(graph, tmp_path):
     assert report["by_hop"]["1"]["n"] == 1
 
 
+def test_abstention_scores_zero_without_judge_call(graph, tmp_path):
+    from vihermes.models import QAExample
+
+    class Judge:
+        def json(self, *args):
+            raise AssertionError("An empty prediction must not be sent to a judge")
+
+    pf = Pathfinder(HybridRetriever(graph, weight=0), GraphPropagator(graph))
+    engine = Conductor(Interpreter(), pf, Auditor())
+    report = evaluate(
+        [QAExample("q", "Hồ sơ gồm gì?", "Bệnh án.", ["missing"])],
+        pf,
+        tmp_path,
+        engine,
+        Judge(),
+    )
+    assert report["overall"]["judge"] == 0
+    assert report["overall"]["judge_n"] == 1
+    assert report["overall"]["f1"] == 0
+    row = json.loads((tmp_path / "predictions.jsonl").read_text())
+    assert row["answer"]["abstained"]
+    assert row["retrieval_trace"] == {"nodes": [], "edges": []}
+
+
 def test_tuple_constraints_and_validation():
     nodes = [node(str(i)) for i in range(10)]
     tuples = sample_tuples(nodes, 3, 4, overlap=0.34)

@@ -81,7 +81,9 @@ def conductor(args, pathfinder):
     from .adapters.models import OpenAILanguageModel
 
     llm = OpenAILanguageModel(args.model) if args.generator == "openai" else None
-    return Conductor(Interpreter(llm), pathfinder, Auditor(llm), llm)
+    return Conductor(
+        Interpreter(llm), pathfinder, Auditor(llm), llm, repair_attempts=args.repair_attempts
+    )
 
 
 def parser():
@@ -109,6 +111,7 @@ def parser():
             command.add_argument("--model", default="gpt-4o-mini")
         if name in ("ask", "evaluate"):
             command.add_argument("--generator", choices=["openai", "extractive"], default="openai")
+            command.add_argument("--repair-attempts", type=int, choices=(0, 1, 2), default=1)
         if name == "ingest":
             command.add_argument("--input", required=True)
         elif name == "index":

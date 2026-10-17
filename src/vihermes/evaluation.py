@@ -48,6 +48,13 @@ def evaluate(examples, pathfinder, output, conductor=None, judge=None, ks=(1, 5,
                 "retrieved_ids": ids,
                 "gold_context_ids": example.gold_context_ids,
                 "warnings": result.warnings,
+                "retrieval_trace": {
+                    "nodes": [
+                        {"id": e.node.id, "kind": e.node.kind, "origin": e.origin}
+                        for e in result.evidence
+                    ],
+                    "edges": [asdict(e) for e in result.edges],
+                },
                 "metadata": example.metadata,
             }
             for k in ks:
@@ -58,15 +65,23 @@ def evaluate(examples, pathfinder, output, conductor=None, judge=None, ks=(1, 5,
                 plain = "\n".join(c.text for c in answer.claims) if not answer.abstained else ""
                 row["f1"] = token_f1(plain, example.answer)
                 if judge:
-                    verdict = judge.json(
-                        JUDGE,
-                        {
-                            "question": example.question,
-                            "prediction": plain,
-                            "reference": example.answer,
-                            "sources": answer.sources,
-                        },
-                    )
+                    if not plain.strip():
+                        verdict = {
+                            "correctness": 0,
+                            "completeness": 0,
+                            "consistency": 0,
+                            "reason": "No answer was returned; scored as zero without a judge call.",
+                        }
+                    else:
+                        verdict = judge.json(
+                            JUDGE,
+                            {
+                                "question": example.question,
+                                "prediction": plain,
+                                "reference": example.answer,
+                                "sources": answer.sources,
+                            },
+                        )
                     values = [
                         verdict.get(key) for key in ("correctness", "completeness", "consistency")
                     ]

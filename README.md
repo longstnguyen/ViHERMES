@@ -49,7 +49,7 @@ The pipeline combines four complementary roles:
 | **Interpreter** | Route the question and identify explicit document references |
 | **Pathfinder** | Rank seed provisions with dense–sparse fusion and expand typed graph relations |
 | **Auditor** | Validate citations, exact evidence spans, known dates/status, and semantic support |
-| **Conductor** | Coordinate the workflow, synthesize supported claims, and request clarification or abstain when needed |
+| **Conductor** | Coordinate synthesis and bounded revision from audit feedback; clarify or abstain when evidence is insufficient |
 
 **Seeded retrieval** combines calibrated dense similarity and BM25 scores with a configurable weight. **Propagation** recursively follows `AMENDS`, `REPLACES`, and `SUPPLEMENTS`, expands `REFERS_TO` by one hop, and retrieves upstream provenance. Node, depth, and text budgets keep the context bounded.
 
@@ -164,7 +164,7 @@ Each run writes:
 
 | File | Contents |
 | :-- | :-- |
-| `predictions.jsonl` | Retrieved IDs, gold IDs, timing, and per-example metrics; answers when requested |
+| `predictions.jsonl` | Retrieved IDs, graph trace, gold IDs, timing, and per-example metrics; answers and validation traces when requested |
 | `metrics.json` | Aggregate and per-hop scores with explicit denominators |
 | `config.json` | CLI settings used for the run |
 
