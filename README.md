@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <strong>Long S. T. Nguyen*</strong> · <strong>Quan M. Bui*</strong> · Tin T. Ngo ·
+  Long S. T. Nguyen* · Quan M. Bui* · Tin T. Ngo ·
   Quynh T. N. Vo · Dung N. H. Le · Tho T. Quan<br>
   <sub>URA Research Group · Ho Chi Minh City University of Technology (HCMUT) · Vietnam National University Ho Chi Minh City<br>* Equal contribution to the paper</sub>
 </p>
