@@ -20,7 +20,7 @@
 <p align="center">
   <strong>Long S. T. Nguyen*</strong> · <strong>Quan M. Bui*</strong> · Tin T. Ngo ·
   Quynh T. N. Vo · Dung N. H. Le · Tho T. Quan<br>
-  <sub>URA Research Group · Ho Chi Minh City University of Technology · Vietnam National University Ho Chi Minh City<br>* Equal contribution to the paper</sub>
+  <sub>URA Research Group · Ho Chi Minh City University of Technology (HCMUT) · Vietnam National University Ho Chi Minh City<br>* Equal contribution to the paper</sub>
 </p>
 
 ## Overview
@@ -38,7 +38,7 @@ The research brings together three components:
 ViHERMES represents regulatory documents as a **Structure-driven Regulatory Knowledge Graph (SRKG)**. Stable document, article, and clause IDs connect the text to its provenance and legal dependencies.
 
 <p align="center">
-  <img src="docs/assets/system.png" width="900" alt="Regulatory knowledge graph with seeded retrieval, typed propagation, and four specialized agents.">
+  <img src="docs/assets/system.png" width="100%" alt="Regulatory knowledge graph with seeded retrieval, typed propagation, and four specialized agents.">
   <br><sub>Legal structure connects retrieval, evidence propagation, and answer verification.</sub>
 </p>
 
@@ -68,7 +68,7 @@ The release includes **998 unique supporting passages**. Both [JSONL](dataset/da
 The dataset construction workflow uses normalized embeddings, clustering, representative-context selection, cross-document tuple sampling, structured QA generation, and evidence validation.
 
 <p align="center">
-  <img src="docs/assets/dataset.png" width="850" alt="Dataset construction from regulatory documents through clustering, generation, validation, and train/test splitting.">
+  <img src="docs/assets/dataset.png" width="100%" alt="Dataset construction from regulatory documents through clustering, generation, validation, and train/test splitting.">
   <br><sub>From regulatory passages to evidence-grounded multihop questions.</sub>
 </p>
 
@@ -114,8 +114,8 @@ The results point to three complementary sources of improvement:
 Use **Python 3.10 or newer**. Clone the repository, install the code, and run the self-contained example:
 
 ```bash
-git clone https://github.com/longstnguyen/Vi-HERMES.git
-cd Vi-HERMES
+git clone https://github.com/longstnguyen/ViHERMES.git
+cd ViHERMES
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .

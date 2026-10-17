@@ -39,11 +39,11 @@ Imported context CSVs retain their released `context_id` values so retrieval res
 | `SUPPLEMENTS` | Affected unit → Supplementing unit | Recursively collect supplements |
 | `REFERS_TO` | Citing unit → Referenced unit | Expand one hop |
 
-Validity edges deliberately point toward the update: “B amends A” becomes `A → B`. Terminal update nodes receive priority; originals remain available because an amendment may affect only part of a provision. A terminal graph node is not itself proof of present-day legal validity. Supplied effective/expiry dates and status are checked by the Auditor.
+Validity edges point toward the update: “B amends A” becomes `A → B`. Terminal update nodes receive priority; originals remain available because an amendment may affect only part of a provision. The Auditor checks supplied effective dates, expiry dates, and legal status when assessing applicability.
 
-References to missing units create placeholders. Ingesting the matching ID replaces the placeholder while preserving its edges. A placeholder never enters the retrievable text corpus. Unresolved references are exposed in the query trace.
+References to missing units create placeholders. Ingesting the matching ID replaces the placeholder while preserving its edges. Resolved nodes enter the retrievable text corpus once their source text is available. Unresolved references are exposed in the query trace.
 
-Ingestion is an upsert workflow: ingesting the same source twice does not duplicate nodes or edges. Use a new graph database for a replacement corpus that removes or renumbers provisions; existing IDs and edges are not implicitly deleted.
+Ingestion updates nodes and edges by their stable IDs, so repeated imports are idempotent. Use a new graph database when replacing a corpus that removes or renumbers provisions.
 
 ## Retrieval and budgets
 
@@ -53,7 +53,7 @@ BM25 and cosine similarities are calibrated independently into a nonnegative ran
 score = dense_weight × dense_score + (1 − dense_weight) × bm25_score
 ```
 
-A small ranking hint promotes explicitly named document IDs without filtering out related documents. The graph policy bounds seed count, validity depth, discovered nodes, final nodes, and text characters. Reference expansion does not recursively follow further reference edges. Parent documents contribute metadata without repeating their full text in generation prompts.
+A small ranking hint promotes explicitly named document IDs without filtering out related documents. The graph policy bounds seed count, validity depth, discovered nodes, final nodes, and text characters. References expand by one hop. Structural links supply parent-document metadata for both seeds and referenced evidence; parent documents are serialized as metadata.
 
 NumPy indexes record the corpus fingerprint, ordered IDs, and embedding model identity. A changed corpus or model requires rebuilding the index. Milvus uses separate collection generations keyed by corpus/model identity; its exact fusion adapter supports up to 16,384 units per collection.
 
@@ -61,11 +61,11 @@ NumPy indexes record the corpus fingerprint, ordered IDs, and embedding model id
 
 Generated answers consist of individual claims, source IDs, and exact supporting quotations. The Auditor first checks source membership, quoted spans, known status/dates, and replacement conflicts. In generative mode, an additional structured LLM call checks semantic entailment and amendment consistency.
 
-Failed grounding returns an abstention rather than the rejected draft. Offline extractive mode accepts only verbatim claims; it is useful for testing the pipeline without a model service. Full generative runs can use a different verifier by injecting another `LanguageModel` into `Auditor`.
+Failed grounding returns an abstention. Offline extractive mode returns source quotations for local pipeline checks. Full generative runs can use a different verifier by injecting another `LanguageModel` into `Auditor`.
 
 ## Adding a backend
 
-Implement a protocol in `ports.py`, then supply the instance to the domain service. Keep provider credentials in environment variables. Exceptions propagate to the caller: adapters do not silently switch models, omit failed records, or clear external stores.
+Implement a protocol in `ports.py`, then supply the instance to the domain service. Keep provider credentials in environment variables. Provider errors propagate to the caller for diagnosis. Evaluation retains completed predictions when a provider call fails.
 
 ```python
 from vihermes.agents import Auditor, Conductor, Interpreter, Pathfinder

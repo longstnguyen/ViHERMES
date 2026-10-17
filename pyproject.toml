@@ -14,7 +14,7 @@ authors = [{name = "Long S. T. Nguyen"}, {name = "Quan M. Bui"}]
 dependencies = ["numpy>=1.24,<3"]
 
 [project.urls]
-Repository = "https://github.com/longstnguyen/Vi-HERMES"
+Repository = "https://github.com/longstnguyen/ViHERMES"
 Paper = "https://doi.org/10.1007/978-981-92-0071-9_22"
 
 [project.optional-dependencies]

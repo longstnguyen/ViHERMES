@@ -192,6 +192,20 @@ class GraphPropagator:
                     if add(edge.source, score * 0.7, "provenance"):
                         queue.append((edge.source, depth, score * 0.7))
 
+        # Reference neighbors also need provenance, without expanding their legal edges.
+        hierarchy = deque(chosen)
+        traced = set()
+        while hierarchy:
+            key = hierarchy.popleft()
+            if key in traced:
+                continue
+            traced.add(key)
+            for edge in self.graph.edges(key, incoming=True):
+                if edge.relation in STRUCTURAL:
+                    edge_set.add(edge)
+                    if add(edge.source, chosen[key].score * 0.7, "provenance"):
+                        hierarchy.append(edge.source)
+
         # Detect actual cycles, not shared paths reached from multiple seeds.
         adjacency = defaultdict(set)
         degrees = {key: 0 for key in chosen}

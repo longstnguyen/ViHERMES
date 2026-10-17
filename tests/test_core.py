@@ -81,6 +81,30 @@ def test_cycles_and_limits(graph):
     assert any("depth" in w for w in result.warnings)
 
 
+def test_reference_evidence_includes_document_provenance_without_reference_drift(graph):
+    put(graph, *(node(k) for k in ["seed", "reference", "drift"]))
+    document = Node(
+        "source-document",
+        "source-document",
+        kind="Document",
+        title="Referenced regulation",
+        metadata={"issuing_authority": "Ministry of Health"},
+    )
+    put(graph, document)
+    for edge in [
+        Edge("seed", "reference", "REFERS_TO"),
+        Edge("reference", "drift", "REFERS_TO"),
+        Edge(document.id, "reference", "HAS_CLAUSE"),
+    ]:
+        graph.upsert_edge(edge)
+    result = GraphPropagator(graph).expand([Evidence(graph.get("seed"), 1)])
+    evidence = {e.node.id: e for e in result.evidence}
+    assert document.id in evidence
+    assert evidence[document.id].node.metadata == document.metadata
+    assert evidence[document.id].origin == "provenance"
+    assert "drift" not in evidence
+
+
 def test_dense_sparse_weight_and_cache(graph, tmp_path):
     put(graph, node("a", "hồ sơ bệnh án"), node("b", "học phí đại học"))
 

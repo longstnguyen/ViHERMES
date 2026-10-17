@@ -4,7 +4,7 @@
 
 [↑ Dataset overview](../README.md#dataset) · [Usage guide](../docs/usage.md) · [Citation](../README.md#citation)
 
-This directory preserves the released question–answer records in [JSONL](dataset.jsonl) and [CSV](dataset.csv). Both formats contain questions, reference answers, reasoning, evidence, hop levels, and the source context blocks.
+This directory contains the question–answer records in [JSONL](dataset.jsonl) and [CSV](dataset.csv). Both formats contain questions, reference answers, reasoning, evidence, hop levels, and the source context blocks.
 
 | Field | Meaning |
 | :-- | :-- |
@@ -16,7 +16,7 @@ This directory preserves the released question–answer records in [JSONL](datas
 | `reasoning` | Explanation connecting the evidence |
 | `context_block` | Context IDs, titles, and passage text |
 
-The bundled records comprise 312 examples at each of hops 1–4 and 313 at hop 5: **1,561 total**. The paper's statistics describe a 1,560-example test set. The loader preserves every bundled row and exposes stable evaluation IDs plus the original ID and row number, so repeated generation-local IDs cannot overwrite predictions.
+The release contains **1,561 records**: 312 examples at each of hops 1–4 and 313 at hop 5. The study reports a 1,560-example test set. Evaluation outputs identify each released record by a stable row ID and retain its original question ID and row number.
 
 ```bash
 vihermes audit-data --qa dataset/dataset.jsonl
@@ -24,6 +24,6 @@ vihermes extract-contexts --qa dataset/dataset.jsonl \
   --output outputs/contexts.csv
 ```
 
-Context extraction yields **998 unique passages** and verifies that repeated context IDs have identical titles and text. It reads only the source context blocks; reference answers and reasoning are not inserted into the retrieval corpus.
+Context extraction yields **998 unique passages** and verifies that repeated context IDs have identical titles and text. The retrieval corpus is built from `context_block`; `answer` and `reasoning` serve as evaluation annotations.
 
 If you use this dataset, please cite the [ViHERMES paper](../README.md#citation). Regulatory document titles and context IDs provide provenance for the supplied passages.
